@@ -1,0 +1,36 @@
+ex1:
+1-Combien de processus cette instruction engendre-t-elle (en ne comptant pas le père) ?
+Total des processus engendrés (sans compter le père) : 4
+2-
+        Père (1)
+         / \
+      (2)   (5)
+       |
+      (3)
+       |
+      (4)
+
+
+3-Suggérer une ligne de commande shell qui permet de vérifier vos réponses:
+./ex3 & (ps -ao pid,ppid,cmd | grep ex3)
+ex2:
+#include <unistd.h>
+
+int main(void) {
+    if (fork())
+        fork() && (fork() || (fork() && fork()));
+    else
+        fork();
+
+    sleep(2);
+    return 0;
+}
+gcc -Wall -W -pedantic -c -o ex2.o ex2.c
+gcc ex2.o -o ex2
+./ex2 & (ps f -o ppid,pid,cmd | grep ex2$)
+
+
+
+
+
+
