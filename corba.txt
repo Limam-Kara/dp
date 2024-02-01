@@ -1,0 +1,161 @@
+Interface Banque : Code IDL :
+Pour commencer, il faut écrire un fichier d'interface en langage IDL (Interface Definition Language) qui décrit les prototypes des méthodes de l'objet distant (on décrit le nom de la méthode et les types des paramètres et du résultat)
+1. Le module "corbaBanque" :Le module est une manière de regrouper des définitions, des structures et des interfaces connexes dans un seul espace de nom. Dans ce cas, "corbaBanque" est le nom du module ( représente la notion de Package dans jabva ).
+2. La structure "Compte" :
+La structure "Compte" est définie avec deux membres :2
+ "code" de type "long" : Il s'agit d'un numéro de compte.
+ "solde" de type "double" : Il s'agit du solde du compt
+3. L'interface "IBanqueRemote" :
+L'interface "IBanqueRemote" est définie avec deux méthodes :
+ "conversion" : Cette méthode prend un argument d'entrée de type
+ "double" nommé "mt" et renvoie un résultat de type "double". Cette
+ méthode est utilisée pour effectuer une conversion
+ "getCompte" : Cette méthode prend un argument d'entrée de type
+"long" nommé "code" et renvoie un résultat de type "Compte". Elle est
+utilisée pour obtenir les détails d'un compte en fonction de son "code"
+module corbaBanque {
+	struct Compte {
+		long code;
+		double solde;
+	};
+	interface IBanqueRemot {
+		double conversion(in double mt);
+	Compte getCompte(in long code);
+	};
+};
+
+Compilation du fichier IDL :
+idlj –fall –v Banque.idl
+
+IClasse BanqueServiceImpl : (Code Java)
+package Servant;
+import corbaBanque.Compte;
+import corbaBanque.IBanqueRemotPOA;
+public class BanqueServiceImpl extends IBanqueRemotPOA {
+    @Override
+    public double conversion(double mt) {
+        // Perform currency conversion
+        return mt * 215; // Assuming fixed conversion rate
+    }
+    @Override
+    public Compte getCompte(int code) {
+        // Generate a random balance for the account
+        double balance = Math.random() * 3000;
+        // Create and return a new Compte object with the given code and balance
+        return new Compte(code, balance);
+    }
+}
+
+Classe ServeurCORBA (Code Java )
+Ce code Java illustre un serveur CORBA simple qui publie un objet distant dans un annuaire
+JNDI (Java Naming and Directory Interface). Voici une explication étape par étape du code :
+1. Import des Classes : Le code commence par importer les classes Java nécessaires
+pour le serveur CORBA, JNDI, et l'implémentation de l'objet distant
+(BanqueServiceImpl).
+2. Initialisation de l'ORB : L'ORB (Object Request Broker) est initialisé en utilisant la
+méthode ORB.init(args, null). L'ORB est le composant central de CORBA qui
+gère la communication entre les objets distants.
+3. Récupération du POA (Portable Object Adapter) : Le code récupère une référence
+vers le POA en utilisant ORB.resolve_initial_references("RootPOA"). Le POA
+est responsable de la création et de l'activation d'objets distants.
+4. Activation du POA : Après avoir récupéré le POA, il est activé en appelant
+rootPOA.the_POAManager().activate(). Cela permet au POA de gérer les objets
+distants.
+5. Création de l'Objet Distant : Une instance de l'objet distant BanqueServiceImpl est
+créée. Cet objet représente l'implémentation de l'interface CORBA distante.
+6. Initialisation de l'annuaire JNDI : Une instance de InitialContext est créée pour
+accéder à l'annuaire JNDI.
+7. Publication de la Référence : L'objet distant (od) est publié dans l'annuaire JNDI
+avec la ligne ctx.rebind("BANQUE", rootPOA.servant_to_reference(od)). Cela
+8. Démarrage de l'ORB : Enfin, l'ORB est démarré en appelant orb.run(). Cela
+permet à l'ORB de commencer à écouter les appels des clients.
+9. Gestion des Exceptions : Le code gère les exceptions qui peuvent survenir pendant
+l'exécution. Les exceptions possibles incluent des erreurs liées au POA, à JNDI, à
+l'objet distant, etc.
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA_2_3.ORB;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.POAHelper;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.ServantNotActive;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
+import Servant.BanqueServiceImpl;
+public class ServeurCORBA {
+    public static void main(String[] args) {
+        try {
+            org.omg.CORBA.ORB orb = ORB.init(args, null);
+            System.out.println("CRéer l'ORB ....");
+/// intialisation de l’ORB
+            POA rootPOA
+                    = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));// récupérer le POA
+            System.out.println("Récupérer le POA ...");
+//caster l'objet ou la référence en objet POA en utlilisant narrow qui permet de caster les objet CORBA
+            rootPOA.the_POAManager().activate(); // Activer le POA
+            System.out.println("Activer le POA ....");
+            BanqueServiceImpl od = new BanqueServiceImpl();// Créer l'objet distant
+            System.out.println("creer Objet CORBA ....");
+            Context ctx = new InitialContext();// crear l'annuair jndi
+            System.out.println("Initialiser l'annuair JNDI ....");
+            Object ref = rootPOA.servant_to_reference(od); //générer la référence
+            ctx.rebind("BANQUE", ref);// publier la référence
+            System.out.println("Publier l'Objet CORBA ....");
+            orb.run();// démarrer l'ORB
+        } catch (InvalidName | AdapterInactive | NamingException
+                | ServantNotActive | WrongPolicy e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Client CORBA (ClientCORBA.java) :
+Ce code Java d'un client CORBA qui utilise un annuaire JNDI pour rechercher et accéder à un
+objet distant (implémenté par IBanqueRemot) via une référence distante. Voici une
+explication du code étape par étape :
+1. Import des Classes : Le code commence par importer les classes Java nécessaires
+pour le client CORBA, JNDI, et les interfaces distantes (IBanqueRemot et Compte).
+2. Initialisation du Contexte JNDI : Une instance de InitialContext est créée pour
+initialiser le contexte JNDI. Le contexte JNDI est utilisé pour effectuer des opérations
+de recherche d'objets distants.
+3. Recherche de la Référence de l'Objet Distant : Le code utilise le contexte JNDI
+pour rechercher la référence de l'objet distant sous le nom "BANQUE" avec la ligne
+ctx.lookup("BANQUE"). Cela permet de récupérer la référence de l'objet distant
+enregistrée dans l'annuaire JNDI.
+4. Casting de la Référence : La référence récupérée est ensuite castée en tant qu'objet de
+type IBanqueRemot en utilisant
+IBanqueRemotHelper.narrow((org.omg.CORBA.Object) ref). Cela permet au
+client d'interagir avec l'objet distant en utilisant les méthodes de l'interface
+IBanqueRemot.
+5. Appel de Méthodes sur l'Objet Distant : Le code effectue des appels de méthodes
+sur l'objet distant. Par exemple, il appelle stub.conversion(23) pour effectuer une
+conversion
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import corbaBanque.Compte;
+import corbaBanque.IBanqueRemot;
+import corbaBanque.IBanqueRemotHelper;
+public class ClientCORBA {
+    public static void main(String[] args) {
+        try {
+            Context ctx = new InitialContext();// chercher le context JNDI
+            System.out.println("Initialiser le Context JNDI ....");
+            Object ref = ctx.lookup("BANQUE");// recuperer la reference du service
+            System.out.println("Chercher la référence de l'objet distant BANQUE ");
+            IBanqueRemot stub = IBanqueRemotHelper.narrow((org.omg.CORBA.Object) ref);// caster la reference
+            System.out.println("Caster la référence en un Objet IBanqueRemot ....");
+            System.out.println("23 EURO = " + stub.conversion(23) + " en DA ");
+            Compte cp = stub.getCompte(3);
+            System.out.println("crer un compte ....");
+            System.out.println("code =" + cp.code);
+            System.out.println(" Solde =" + cp.solde);
+        } catch (NamingException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
